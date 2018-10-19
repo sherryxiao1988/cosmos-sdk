@@ -6,19 +6,6 @@ Before getting in the bulk of the code, we will start by some introductory conte
 
 ## Table of contents:
 
-### Introduction - Prerequisite reading
-
-- [Intro to Tendermint and Cosmos](/introduction/tendermint-cosmos.md)
-- [Tendermint Core and ABCI](/introduction/tendermint.md)
-- [Intro to Cosmos-SDK](/sdk/overview.md)
-
-
-### [Setup and design](setup-and-design.md)
-
-- [Starting your own project](setup-and-design.md#get-started)
-- [Setup](setup-and-design.md#setup)
-- [Application design](setup-and-design.md#application-design)
-
 ### Implementation of the application
 
 **Important note: All the code for this application can be found [here](https://github.com/cosmos/cosmos-sdk/tree/fedekunze/module_tutorial/examples/simpleGov). Snippets will be provided throughout the tutorial, but please refer to the provided link for the full implementation details**
