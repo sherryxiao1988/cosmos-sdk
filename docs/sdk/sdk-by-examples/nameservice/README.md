@@ -39,15 +39,24 @@ In the SDK, everything is stored in one store called the `multistore`. Any numbe
 
 ### Messages
 
+Messages are contained in transaction, and trigger state-transitions. Each module defines a list of messages and how to handle them. Here are the messages we need for our nameservice application:
 
+- `MsgSetName`: This message allows name owners to set a value for a given name in the `nameStore`.
+- `MsgBuyName`: This message allows accounts to buy a name and become their owner in the `ownerStore`. 
+
+When a transaction (included in a block) reaches a Tendermint node, it is passed to the application via the ABCI and decoded to get the message. The message is then routed to the appropriate module and handled there according to the logic defined in the `handler`. If the state needs to be updated, the `handler` calls the `keeper` to perform the update.
+
+Now that we have defined how our application works from a high-level perspective, we can start implementing it! 
 
 ## The Keeper
 
-The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other keepers, and often contains most of the core functionality of a module.  To begin, let's create a file called `keeper.go` and place it in a folder called `./x/nameservice` that will hold our module. It is general practice to keep the modules in the `./x/` folder.
+The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other module's keepers, and often contains most of the core functionality of a module.  
+
+To begin, let's create an empty git folder. In this folder, let's create a file called `keeper.go` and place it in a folder called `./x/nameservice` that will hold our module. It is general practice to keep the modules in the `./x/` folder.
 
 ### Keeper Struct
 
-In this file, let's start by placing the following code.
+In the `keeper.go` file, let's start by placing the following code.
 
 ```go
 package nameservice

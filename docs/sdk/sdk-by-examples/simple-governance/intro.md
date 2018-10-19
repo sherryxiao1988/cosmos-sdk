@@ -1,5 +1,7 @@
 # SDK By Examples - Simple Governance Application 
 
+**THE CODE FOR THIS TUTORIAL IS OUTDATED. WE ARE WORKING TO UPDATE IT**
+
 In this tutorial, you will learn the basics of coding an application with the Cosmos-SDK. Applications built on top of the SDK are called *Application-specific blockchains*. They are decentralised applications running on their own blockchains. The application we will build in this tutorial is a simple governance application.
 
 Before getting in the bulk of the code, we will start by some introductory content on Tendermint, Cosmos and the programming philosophy of the SDK. Let us get started!
