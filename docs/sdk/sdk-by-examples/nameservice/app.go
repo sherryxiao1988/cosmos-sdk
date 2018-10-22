@@ -11,7 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
+	"github.com/cosmos/cosmos-sdk/tree/gamarin/integrate-nameservice/docs/sdk/sdk-by-examples/nameservice"
 )
 
 const (

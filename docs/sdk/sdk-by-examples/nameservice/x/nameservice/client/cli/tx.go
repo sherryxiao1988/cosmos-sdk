@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
-	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
+	"github.com/cosmos/cosmos-sdk/tree/gamarin/integrate-nameservice/docs/sdk/sdk-by-examples/nameservice"
 )
 
 const (

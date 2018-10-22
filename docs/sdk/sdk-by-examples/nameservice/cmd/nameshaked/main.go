@@ -15,7 +15,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 
-	app "github.com/sunnya97/sdk-nameservice-example"
+	app "github.com/cosmos/cosmos-sdk/tree/gamarin/integrate-nameservice/docs/sdk/sdk-by-examples/nameservice"
 )
 
 var DefaultNodeHome = os.ExpandEnv("$HOME/.nameshaked")
