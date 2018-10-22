@@ -19,7 +19,7 @@ All of the final source code for this tutorial project is in this directory, how
 5. Register your types in the encoding format using [`sdk.Codec`](#codec-file)
 6. Create [CLI interactions for your module](#nameservice-module-cli)
 7. Put it all together in [`./app.go`](#app.go)!
-8. Create the [`nameshaked` and `nameshakecli` entry points](#nameshaked-and-nameshakecli)
+8. Create the [`nameshaked` and `nameshakecli` entry points](#entrypoints)
 9. Setup [dependencies](#dependencies)
 10. [Install and run](#installing-the-software) the software
 
@@ -336,7 +336,7 @@ The second allows the `Msg` to define whose signature is required on a transacti
 
 Now that the `MsgSetName` is defined, you have to define the handler that actually executes the `Msg`.
 
-In a new file called `handler.go` in the `nameservice` package, we start off with:
+In a new file called `handler.go` in the `nameservice` package, start off with:
 
 ```go
 package nameservice
@@ -361,10 +361,9 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	}
 }
 ```
+This is essentially a subrouter that directs messages coming into this module to the proper handler for the message.  At the moment, there is only one `Msg`/`Handler`.
 
-This is essentially a subrouter that directs messages coming into this module to the proper handler for the message.  At the moment, we only have one Msg/Handler.
-
-In the same file, we define the function `handleMsgSetName`.
+Now, you need to handle the actual logic for handling message in `handleMsgSetName`.
 
 ```go
 // Handle MsgSetName
@@ -376,15 +375,15 @@ func handleMsgSetName(ctx sdk.Context, keeper Keeper, msg MsgSetName) sdk.Result
 	return sdk.Result{}                      // return
 }
 ```
-In this function we check to see if the Msg sender is actually the owner of the name (which we get using `keeper.GetOwner`).  If so, we let them set the name by calling the function on the keeper.  If not, we throw an error.
+This function checks to see if the `Msg` sender is actually the owner of the name (which is retrieved using `keeper.GetOwner`). If so, they can set the name by calling the function on the keeper. If not, an error is thrown.
 
 ### Buy Name
 
-Great, now owners can set names!  But what if a name doesn't have an owner yet?  We need a way for people to buy names!
+Great, now owners can set names! But what if a name doesn't have an owner yet? There needs to be a way for people to buy names!
 
 #### Msg
 
-We define the Msg for buying names and add it to the `msgs.go` file:
+First, define the `Msg` for buying names and add it to the `msgs.go` file.
 
 ```go
 type MsgBuyName struct {
@@ -434,7 +433,8 @@ func (msg MsgBuyName) GetSigners() []sdk.AccAddress {
 }
 ```
 
-In the `handler.go` file, we add the `MsgBuyName` handler to the module router, so it now looks like this:
+In the `handler.go` file, add the `MsgBuyName` handler to the module router, so it now looks like this:
+
 ```go
 // NewHandler returns a handler for "nameservice" type messages.
 func NewHandler(keeper Keeper) sdk.Handler {
@@ -452,7 +452,8 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 ```
 
-And we add the actual handle function to the `handler.go` file:
+Now, add the actual handle function to the `handler.go` file:
+
 ```go
 // Handle MsgBuyName
 func handleMsgBuyName(ctx sdk.Context, keeper Keeper, msg MsgBuyName) sdk.Result {
@@ -475,13 +476,19 @@ func handleMsgBuyName(ctx sdk.Context, keeper Keeper, msg MsgBuyName) sdk.Result
 	return sdk.Result{}
 }
 ```
-In this function, we check to make sure the bid is higher than the current price.  If it is, we check to see whether the name already has an owner.  If it does, they get transferred the money from the Buyer.  If it doesn't, the money just gets burned from the buyer.  If either `SubtractCoins` or `SendCoins` returns a non-nil error, the handler throws an error, reverting the transaction.  Otherwise, we set the buyer to the new owner, set the new price to be the current bid, and return.
+This function checks to make sure the bid is higher than the current price.  If it is, it checks to see whether the name already has an owner. If it does, they get transferred the money from the Buyer. If it doesn't, the money just gets burned. If either `SubtractCoins` or `SendCoins` returns a non-nil error, the handler throws an error, reverting the transaction. Otherwise, the function sets the buyer to the new owner, the new price to the current bid, and returns.
 
-Now that the core logic of our nameservice is finished, let's actually build an app that uses the module.  The main focus of this tutorial was the building of the core module, and the rest of the tutorial is just to get the app up and running, so the explanations will be less exhaustive from here on out. In most cases, you'll be using similar boilercode as well.
+Now that the core logic of your nameservice is finished, let us actually build an app that uses the module. 
 
 ## Querier
 
-In your module's folder create a `querier.go` file.  This file allows for advanced queries into the application state.
+Start by creating the `./x/nameservice/querier.go` file. This is the place to define which queries against application state users will be able to make. In our `nameservice` we want to expose two:
+
+- `resolve`: This takes a `name` and returns the `value` that is stored by the `nameservice`. This is similar to a DNS query.
+- `whois`: This takes a `name` and returns the `price`, `value`, and `owner` of the name. Used for figuring out how much names cost when you want to buy them.
+
+Start by defining the `NewQuerier` function which acts a sub-router for queries to this module (similar to our `NewHandler` function). Note that because we don't have an interface similar to `Msg` for queries we need to manually define our switch statement cases (they can't be pulled off of the query `.Name()` function):
+
 
 ```go
 package nameservice
@@ -510,7 +517,10 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		}
 	}
 }
+```
+Now that the router is defined, define the inputs and responses for each query:
 
+```go
 // nolint: unparam
 func queryResolve(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
 	name := path[0]
@@ -549,9 +559,13 @@ func queryWhois(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Ke
 }
 ```
 
+Notes on the above code:
+- Here our `Keeper` getters/setters come into heavy use. When building any other applications you may need to go back and define more getters/setters to access the pieces of state you need at this point.
+- If your application needs some custom response types (`Whois` here), define them in this file.
+
 ## Codec File
 
-In your module's folder create a `codec.go` file.  This allows Amino to register the `MsgSetName` and `MsgBuyName`.
+To [register your types with Amino](https://github.com/tendermint/go-amino#registering-types) so that they can be encoded/decoded by your module there is a bit of code that needs to be placed in `./x/nameservice/codec.go`. Any interface you create and any struct that implements an interface. In this app the two `Msg` interface implementations we have (`SetName` and `BuyName`) need to be registered, but our `Whois` query return type does not:
 
 ```go
 package nameservice
@@ -569,13 +583,13 @@ func RegisterCodec(cdc *codec.Codec) {
 
 ## Nameservice Module CLI
 
-Next, in the module's folder, create two files:
- - `./client/cli/query.go`
- - `./client/cli/tx.go`
+The CosmosSDK uses the [`cobra`](https://github.com/spf13/cobra) library for CLI interactions. This library makes it easy for each module to expose it's own commands. To get started defining the user's CLI interactions with your module create the following files:
 
-These will enable our cli to understand our module.
+ - `./x/nameservice/client/cli/query.go`
+ - `./x/nameservice/client/cli/tx.go`
 
-query.go
+Start in `query.go`. Here, define `cobra.Command`s for each of your modules `Queriers` (`resolve`, and `whois`):
+
 ```go
 package cli
 
@@ -645,8 +659,16 @@ func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 ```
+Notes on the above code:
+- The CLI introduces a new `context`: [`CLIContext`](https://godoc.org/github.com/cosmos/cosmos-sdk/client/context#CLIContext). It carries data about user input and application configuration that are needed for CLI interaction. See the godoc for more methods.
+- The `path` required for the `cliCtx.QueryWithData()` function maps directly to the names in your query router.
+- The first part of the path is to differentiate the types of queries possible to SDK applications: `custom` is for queriers. The second piece is for the module name. Following that is the specific querier in the module that will be called. In these examples the fourth piece is the query. This works becuase the query parameter is a simple string. To enable more complex query inputs you need to use the second arguement of the [`.QueryWithData()`](https://godoc.org/github.com/cosmos/cosmos-sdk/client/context#CLIContext.QueryWithData) function to pass in `data`.
 
-tx.go
+Once the query interactions are defined, its time to move on to the transaction generation in `tx.go`:
+
+> _*NOTE*_: Your application needs to import the code you just wrote. Here the import path is set to this repository (`github.com/sunnya97/sdk-nameservice-example/x/nameservice`). If you are following along in your own repo you will need to change the import path to reflect that (`github.com/{{ .Username }}/{{ .Project.Repo }}/x/nameservice`).
+
+
 ```go
 package cli
 
@@ -761,9 +783,12 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 
 ```
 
+Notes on the above code:
+- The `authcmd` package is used here. [The godocs have more information on usage](https://godoc.org/github.com/cosmos/cosmos-sdk/x/auth/client/cli#GetAccountDecoder). It provides access to accounts controlled by the CLI and facilitates signing.
+
 ## App.go
 
-Next, in the root of our project directory, let's create a new file called `app.go`.  At the top of the file, let's declare the package and import our dependencies.
+Next, in the root of your project directory, create a new file called `app.go`.  At the top of the file, let's declare the package and import our dependencies.
 
 ```go
 package app
@@ -786,9 +811,22 @@ import (
 )
 ```
 
-Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the four modules we will use in our app: `auth`, `bank`, and `nameservice`.
+> _*NOTE*_: Your application needs to import the code you just wrote. Here the import path is set to this repository (`github.com/sunnya97/sdk-nameservice-example/x/nameservice`). If you are following along in your own repo you will need to change the import path to reflect that (`github.com/{{ .Username }}/{{ .Project.Repo }}/x/nameservice`).
 
-Next we'll declare the name and struct for our app.  In this example, we'll call it Nameshake, a portmanteau of Handshake and Namecoin. 
+Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the three modules we will use in our app: `auth`, `bank`, and `nameservice`.
+
+Links to godocs for each package:
+- [`codec`](https://godoc.org/github.com/cosmos/cosmos-sdk/codec): Functions for working with amino
+- [`auth`](https://godoc.org/github.com/cosmos/cosmos-sdk/x/auth)
+- [`bank`](https://godoc.org/github.com/cosmos/cosmos-sdk/x/bank)
+- [`baseapp`](https://godoc.org/github.com/cosmos/cosmos-sdk): This module helps developers bootstrap CosmosSDK applications
+- [`types`](https://godoc.org/github.com/cosmos/cosmos-sdk): Common types for working with SDK applications
+- [`abci`](https://godoc.org/github.com/tendermint/tendermint/abci/types): Similar to the `sdk/types` module, but for Tendermint
+- [`cmn`](https://godoc.org/github.com/tendermint/tendermint/libs/common): Code for working with Tendermint applications
+- [`dbm`](https://godoc.org/github.com/tendermint/tendermint/libs/db): Code for working with the Tendermint database
+
+
+Next declare the name and struct for your app.  In this example, the app is called Nameshake, a portmanteau of Handshake and Namecoin. 
 
 ```go
 const (
@@ -810,8 +848,13 @@ type NameshakeApp struct {
 	nsKeeper      nameservice.Keeper
 }
 ```
-
-Now we will create a constructor for a new HandshakeApp.  In this, we will generate all storeKeys and Keepers.  We will register the routes, mount the stores, and set the initChainer (explained next).
+Next, create a constructor for a new `NameshakeApp`.  In this function your application:
+- Generates `storeKeys`
+- Creates `Keepers`
+- Registers `Handler`s
+- Registers `Querier`s
+- Mounts `KVStore`s
+- Sets the `initChainer`
 
 ```go
 func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
@@ -870,7 +913,7 @@ func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
 }
 ```
 
-Next, we'll add an initChainer function so we can generate accounts with initial balance from the `genesis.json`.
+The `initChainer` defines how accounts in `genesis.json` are mapped into the application state on initial chain start. The constructor registers the `initChainer` function, but it isn't defined yet. Go ahead and create it:
 
 ```go
 type GenesisState struct {
@@ -895,7 +938,7 @@ func (app *NameshakeApp) initChainer(ctx sdk.Context, req abci.RequestInitChain)
 }
 ```
 
-And finally, a helper function to generate an amino codec.
+Finally add a helper function to generate an amino [`*codec.Codec`](https://godoc.org/github.com/cosmos/cosmos-sdk/codec#Codec) that properly registers all of the modules used in your application:
 
 ```go
 func MakeCodec() *codec.Codec {
@@ -909,13 +952,25 @@ func MakeCodec() *codec.Codec {
 }
 ```
 
-## Nameshaked and Nameshakecli
+## Entrypoints
 
-Next, we'll create two files in the root of the project directory that will instantiate the two main pieces of software, the blockchain node and the CLI for interacting with the chain.
-- `/cmd/nameshaked/main.go`
-- `/cmd/nameshakecli/main.go`
+In golang the convention is to place files that compile to a binary in the `./cmd` folder of a project. For our application we have 2 binaries that we want to create:
 
-nameshaked/main.go
+- `nameshaked`: This binary is similar to `bitcoind` or other cryptocurrency daemons in that it maintains peer connections and propagates transactions through the network.
+- `nameshakecli`: This binary provides commands that allow users to interact with your application.
+
+
+To get started create two files in the root of the project directory that will instantiate these binaries:
+- `./cmd/nameserviced/main.go`
+- `./cmd/nameservicecli/main.go`
+
+## Nameshaked
+
+Start by adding the following code to `nameserviced/main.go`:
+
+> _*NOTE*_: Your application needs to import the code you just wrote. Here the import path is set to this repository (`github.com/sunnya97/sdk-nameservice-example`). If you are following along in your own repo you will need to change the import path to reflect that (`github.com/{{ .Username }}/{{ .Project.Repo }}`).
+
+
 ```go
 package main
 
@@ -978,7 +1033,16 @@ func exportAppStateAndTMValidators(
 }
 ```
 
-nameshakecli/main.go
+Notes on the above code:
+- Most of the code combines the CLI commands from 1. Tendermint, 2. CosmosSDK, and 3. Nameservice module
+- The rest of the code helps the application generate genesis state from the configuration
+
+## Nameshakecli
+
+Finish up by building the `nameservicecli` command:
+
+> _*NOTE*_: Your application needs to import the code you just wrote. Here the import path is set to this repository (`github.com/sunnya97/sdk-nameservice-example`). If you are following along in your own repo you will need to change the import path to reflect that (`github.com/{{ .Username }}/{{ .Project.Repo }}`).
+
 ```go
 package cli
 
@@ -1051,10 +1115,11 @@ func GetCmdWhois(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 ## Dependencies
 
-Finally add the following files to the root directory.
+### `Gopkg.toml`
 
-Gopkg.toml
-```
+Golang has a few dependency management tools. In this tutorial you will be using [`dep`](https://golang.github.io/dep/). `dep` uses a `Gopkg.toml` file in the root of the repository to define what dependencies the application needs. CosmosSDK apps currently depend on specific versions of some libraries. The below manifest contains all the necessary versions
+
+```toml
 # Gopkg.toml example
 #
 # Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
@@ -1109,65 +1174,39 @@ Gopkg.toml
   unused-packages = true
 ```
 
-Makefile
+### Makefile
+
+Let us finish our application by writing the makefile.
+
 ```
-# Gopkg.toml example
-#
-# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
-# for detailed Gopkg.toml documentation.
-#
-# required = ["github.com/user/thing/cmd/thing"]
-# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
-#
-# [[constraint]]
-#   name = "github.com/user/project"
-#   version = "1.0.0"
-#
-# [[override]]
-#   name = "github.com/x/y"
-#   version = "2.4.0"
-#
-# [prune]
-#   non-go = false
-#   go-tests = true
-#   unused-packages = true
+get_tools:
+ifdef DEP_CHECK
+    @echo "Dep is already installed.  Run 'make update_tools' to update."
+else
+    @echo "Installing dep"
+    go get -v $(DEP)
+endif
+ifdef STATIK_CHECK
+    @echo "Statik is already installed.  Run 'make update_tools' to update."
+else
+    @echo "Installing statik"
+    go version
+    go get -v $(STATIK)
+endif
 
-[[constraint]]
-  name = "github.com/cosmos/cosmos-sdk"
-  branch = "develop"
+get_vendor_deps:
+    @echo "--> Generating vendor directory via dep ensure"
+    @rm -rf .vendor-new
+    @dep ensure -v -vendor-only
 
-[[override]]
-  name = "github.com/golang/protobuf"
-  version = "=1.1.0"
-
-[[constraint]]
-  name = "github.com/spf13/cobra"
-  version = "~0.0.1"
-
-[[constraint]]
-  name = "github.com/spf13/viper"
-  version = "~1.0.0"
-
-[[override]]
-  name = "github.com/tendermint/go-amino"
-  version = "=v0.12.0"
-
-[[override]]
-  name = "github.com/tendermint/iavl"
-  version = "=v0.11.0"
-
-[[override]]
-  name = "github.com/tendermint/tendermint"
-  version = "=0.25.0"
-
-[prune]
-  go-tests = true
-  unused-packages = true
+install:
+    go install ./cmd/nameshaked
+    go install ./cmd/nameshakecli
 ```
 
 ## Installing the software
 
-Start by installing Dep.
+First, you need to install `dep`. Below there is a command for using a shell script from `dep`'s site to preform this install. If you are uncomfortable `|`ing `curl` output to `sh` (you should be) then check out [your platform specific installation instructions](https://golang.github.io/dep/docs/installation.html).
 
 ```
 go get -v github.com/golang/dep/cmd/dep
@@ -1179,8 +1218,37 @@ Next, run
 dep ensure
 ```
 
-Finally run
+Finally, run
 
 ```
 make install
+```
+
+## Running the app
+
+To initialize configuration and a `genesis.json` file for your application and an account for the transactions start by running:
+
+> _*NOTE*_: Copy the `Address` output here and save it for later use
+
+```bash
+# Copy the chain_id output here and save it for later use
+nameshaked init
+
+# Copy the `Address` output here and save it for later use
+nameshakecli keys add your_name
+```
+
+Next open the generated file `~/.nameshaked/config/genesis.json` in a text editor and copy in the address output by adding a key. This will give you control over a wallet with some coins when you start your local network. You can now start `nameshaked` by calling `nameshaked start`. You will see blocks being produced.
+
+Open another terminal to run commands against the network you have just created:
+
+> _*NOTE*_: In the below commands `--chain-id` and `accountaddr` are pulled using terminal utilities. You can also just input the raw strings saved from bootstrapping the network above. The commands require `jq` to be installed on your machine.
+
+```bash
+# First check the account to ensure you have funds
+nameshakecli query account $(nameshakecli keys list -o json | jq -r .[0].address) --chain-id $(cat ~/.nameshaked/config/genesis.json | jq -r .chain_id)
+
+# Buy your first name using your coins!
+nameshakecli tx your_name.id 1mycoin --from $(nameshakecli keys list -o json | jq -r .[0].address) --chain-id $(cat ~/.nameshaked/config/genesis.json | jq -r .chain_id)
+
 ```
