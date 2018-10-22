@@ -2,8 +2,8 @@
 
 ## Prerequisites
 
-- Have [go](https://golang.org/dl/), [git](https://git-scm.com/downloads) installed
-- Don't forget to set your `PATH` and `GOPATH`
+- Have [go](https://golang.org/dl/) (>1.11), [git](https://git-scm.com/downloads) installed
+- Don't forget to set your `$PATH` and `$GOPATH`
 
 ## Application design principles
 

@@ -1,12 +1,29 @@
 # SDK By Examples - Nameservice
 
-In this tutorial series, we are going to build a simplistic but functional decentralised application using the [Cosmos SDK](https://github.com/cosmos/cosmos-sdk/) and learn the basics so that you can get started building your own modules and decentralized applications.  
+In this tutorial, you will build a simplistic but functional decentralised application using the [Cosmos SDK](https://github.com/cosmos/cosmos-sdk/) and learn the basics so that you can get started building your own modules and decentralized applications.  
 
-In this tutorial we will build a "nameservice", a mapping of strings to other strings (similar to [Namecoin](https://namecoin.org/), [ENS](https://ens.domains/), or [Handshake](https://handshake.org/)), in which to buy the name, the buyer has to pay the current owner more than the current owner paid to buy it!
+The application we will build is a "nameservice", a mapping of strings to other strings (similar to [Namecoin](https://namecoin.org/), [ENS](https://ens.domains/), or [Handshake](https://handshake.org/)), in which to buy the name, the buyer has to pay the current owner more than the current owner paid to buy it!
 
 All of the final source code for this tutorial project is in this directory, however, it is highly recommended that you follow along manually and try building the project yourself!
 
-We will start by describing the design of our application. If you want to jump directly to the coding section, click [here](#the-keeper).
+## Tutorial parts
+
+1. [Design](#the-application) your application
+    * [State](#state)
+    * [Messages](#messages)
+2. Start by building your [`Keeper`](#the-keeper.md)
+3. Define interactions with your chain through [`Msgs` and `Handlers`](#messages-and-handlers)
+    * [`SetName`](#set-name.md)
+    * [`BuyName`](#buy-name.md)
+4. Make views on your state machine with [`Queriers`](#querier.md)
+5. Register your types in the encoding format using [`sdk.Codec`](#codec-file)
+6. Create [CLI interactions for your module](#nameservice-module-cli)
+7. Put it all together in [`./app.go`](#app.go)!
+8. Create the [`nameshaked` and `nameshakecli` entry points](#nameshaked-and-nameshakecli)
+9. Setup [dependencies](#dependencies)
+10. [Install and run](#installing-the-software) the software
+
+We will start by describing the design of our application. If you want to jump directly to the coding section, click [here](#project-directory-structure).
 
 ## The application
 
@@ -29,9 +46,9 @@ Now, let us look at the two main parts of our application, the state and the mes
 
 The state represents your application at a given moment. It tells how much token each account possesses, what are the owners and price of each name, and to what value each name resolves to. 
 
-The state of tokens and accounts is defined by the `auth` and `bank` modules, which means we don't have to concern ourselves with it for now. What we need to do is define the part of the state that relates specifically to our nameservice module.
+The state of tokens and accounts is defined by the `auth` and `bank` modules, which means we don't have to concern ourselves with it for now. What you need to do is define the part of the state that relates specifically to your nameservice module.
 
-In the SDK, everything is stored in one store called the `multistore`. Any number of KVStores can be created in this multistore. For our application, we need to store:
+In the SDK, everything is stored in one store called the `multistore`. Any number of KVStores can be created in this multistore. For your application, you need to store:
 
 - A mapping of `name` to `value`. We will create a `nameStore` in the `multistore` for it.
 - A mapping of `name` to `owner`. We will create a `ownerStore` in the `multistore` for it.
@@ -39,24 +56,52 @@ In the SDK, everything is stored in one store called the `multistore`. Any numbe
 
 ### Messages
 
-Messages are contained in transaction, and trigger state-transitions. Each module defines a list of messages and how to handle them. Here are the messages we need for our nameservice application:
+Messages are contained in transaction, and trigger state-transitions. Each module defines a list of messages and how to handle them. Here are the messages you need for your nameservice application:
 
 - `MsgSetName`: This message allows name owners to set a value for a given name in the `nameStore`.
 - `MsgBuyName`: This message allows accounts to buy a name and become their owner in the `ownerStore`. 
 
 When a transaction (included in a block) reaches a Tendermint node, it is passed to the application via the ABCI and decoded to get the message. The message is then routed to the appropriate module and handled there according to the logic defined in the `handler`. If the state needs to be updated, the `handler` calls the `keeper` to perform the update.
 
-Now that we have defined how our application works from a high-level perspective, we can start implementing it! 
+Now that you have defined how your application works from a high-level perspective, you can start implementing it! 
+
+## Project directory structure
+
+Through the course of this tutorial you will create the following files that make up your application:
+
+```bash
+./nameservice
+├── Gopkg.toml
+├── app.go
+├── cmd
+│   ├── nameshakecli
+│   │   └── main.go
+│   └── nameshaked
+│       └── main.go
+└── x
+    └── nameservice
+        ├── client
+        │   └── cli
+        │       ├── query.go
+        │       └── tx.go
+        ├── codec.go
+        ├── handler.go
+        ├── keeper.go
+        ├── msgs.go
+        └── querier.go
+```
 
 ## The Keeper
 
-The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with the store, has references to other module's keepers, and often contains most of the core functionality of a module.  
+**[Reference implementation](./x/nameservice/keeper.go)**
 
-To begin, let's create an empty git folder. In this folder, let's create a file called `keeper.go` and place it in a folder called `./x/nameservice` that will hold our module. It is general practice to keep the modules in the `./x/` folder.
+The main core of a Cosmos SDK module is a piece called the Keeper. It is what handles interaction with your module's stores, has references to other module's keepers, and often contains most of the core functionality of a module.  
+
+Begin by creating the file ./x/nameservice/keeper.go to hold the keeper for your module. In Cosmos SDK applications the convention is that modules live in the ./x/ folder.
 
 ### Keeper Struct
 
-In the `keeper.go` file, let's start by placing the following code.
+In the `keeper.go` file, start by placing the following code.
 
 ```go
 package nameservice
@@ -78,21 +123,25 @@ type Keeper struct {
 }
 ```
 
-Let's break this down.  The package name `nameservice` is the name of the package that this file is part of.  In Go, all code has to be part of a package.
+A couple of notes about the above code:
 
-Next we import the main `SDK` package and the `bank` module from the cosmos-sdk repository.
-
-Next, we create the Keeper struct itself.  In this keeper there are a couple of key pieces:
-- `bank.Keeper` - This is a reference to the Keeper from the module.  This allows code in this module to be able to call functions from the bank module.
-- `sdk.StoreKey` - The SDK uses an object capabilities approach to accessing parts of the sections of the application state.  This is to allow developers to employ a least authority approach limiting the capabilities of a faulty or malicious module from affecting parts of state it doesn't need access to.  In this module, we will use three stores:
-    - `namesStoreKey` - This is the main store that stores the value string that the name points to (i.e. The mapping from domain name -> IP Address)
-    - `ownersStoreKey` - This store contains the current owner of this name
-    - `priceStoreKey` - This store contains the price that the current owner paid. And buying of this name must spend more than the current owner.
-- `*codec.Codec` - This is a pointer to the codec that is used by Amino to encode and decode binary structs.
+- The package name `nameservice` is the name of the package that this file is part of.  In Go, all code has to be part of a package.
+- Note the `import` of 3 different `cosmos-sdk` packages:
+    * [`codec`](https://godoc.org/github.com/cosmos/cosmos-sdk/codec) - provides tools to work with the Cosmos encoding format, [Amino](https://github.com/tendermint/go-amino)
+    * [`bank`](https://godoc.org/github.com/cosmos/cosmos-sdk/x/bank) - the bank module controls accounts and coin transfers
+    * [`types`](https://godoc.org/github.com/cosmos/cosmos-sdk/types) - contains commonly used types throughout the SDK
+- The `Keeper` struct. In this keeper there are a couple of key pieces:
+    * `bank.Keeper` - This is a reference to the keeper from the bank module.  It allows code in this module to be able to call functions from the bank's keeper. The SDK uses an object capabilities approach to accessing parts of the sections of the application state. This is to allow developers to employ a least authority approach limiting the capabilities of a faulty or malicious module from affecting parts of state it doesn't need access to.
+    * `*codec.Codec` - This is a pointer to the codec that is used by Amino to encode and decode binary structs.
+    * `sdk.StoreKey` -  This gates access to a `sdk.KVStore` that persists state from transactions into the underlying network.
+- This module has 3 store keys:
+    * `namesStoreKey` - This is the main store that stores the value string that the name points to (i.e. `map[name]value`)
+    * `ownersStoreKey` - This store contains the current owner of this name (i.e. `map[sdk_address]name`)
+    * `priceStoreKey` - This store contains the price that the current owner paid. Anyone buying this name must spend more than the current owner. (i.e. `map[name]price`)
 
 ### Getters and Setters
 
-First let's add a function to set the string the a name resolves to.
+First let's add a function to set the string a given name resolves to.
 
 ```go
 // SetName - sets the value string that a name resolves to
@@ -102,11 +151,13 @@ func (k Keeper) SetName(ctx sdk.Context, name string, value string) {
 }
 ```
 
-In this method on the Keeper, we first get the store object for the name resolutions using the the `namesStoreKey` from the Keeper.
+In this method on the Keeper, we first get the store object for the name resolutions using the `namesStoreKey` from the Keeper.
 
-Next, we insert the `<name, value>` pair into the store using its `.Set([]byte, []byte)` method.  As the store only takes `[]byte` while we have `string`s, we first need to cast the `string`s to `[]byte` and the use them as parameters into the `Set` method.
+>NOTE: This function uses the [`sdk.Context`](https://godoc.org/github.com/cosmos/cosmos-sdk/types#Context) object. This object holds functions to access a number of import pieces of state like blockHeight and chainID. See the godoc for more information on the methods it exposes.
 
-Next, let's add a method to actually resolve the names.
+Next, we insert the `<name, value>` pair into the store using its `.Set([]byte, []byte)` method. As the store only takes `[]byte` type and we want to store a `string`, we first need to cast the `string` to `[]byte` in order to use them as parameters for the `Set` method.
+
+Now, let's add a method to actually resolve the names.
 
 ```go
 // ResolveName - returns the string that the name resolves to
@@ -117,9 +168,9 @@ func (k Keeper) ResolveName(ctx sdk.Context, name string) string {
 }
 ```
 
-Here, like in the SetName method, we first get the store using the `StoreKey`.  Next, instead of using the `Set` method on the store key, we use the `.Get([]byte) []byte` method. As the parameter into the function, we pass the key, which is the `name` string casted to `[]byte`, and get back the result in the form of `[]byte`.  We cast this to a `string` and return the result.
+Here, like in the SetName method, we first get the store using the `StoreKey`.  Next, we use the `.Get([]byte) []byte` method. As the parameter to the function, we pass the key, which is the `name` string casted to `[]byte`, and get back the result in the form of `[]byte`.  We cast this to a `string` and return the result.
 
-We now add similar functions for Getting and Setting Owners.
+Now, let us add similar functions for getting and setting `Owners`.
 
 ```go
     // GetOwner - get the current owner of a name
@@ -142,9 +193,9 @@ We now add similar functions for Getting and Setting Owners.
         return bz != nil
     }
 ```
-Note that now, instead of accessing the the data from the `namesStoreKey` store, we now get it from the `ownersStoreKey` store.  Because sdk.AccAddress is a type alias for `[]byte`, we can natively cast to it.  We also added an extra function `HasOwner` that tells us whether a name already has an owner or not.
+Note that now, instead of accessing the data from the `namesStoreKey` store, we now get it from the `ownersStoreKey` store.  Additionaly, because `sdk.AccAddress` is a type alias for `[]byte`, we can natively cast to it. We also added an extra function `HasOwner` that tells us whether a name already has an owner or not.
 
-Finally, we will add a getter and setter for the Price of a name.
+Finally, we will add a getter and setter for the price of a name.
 
 ```go
     // GetPrice - gets the current price of a name.  If price doesn't exist yet, set to 1steak.
@@ -165,20 +216,20 @@ Finally, we will add a getter and setter for the Price of a name.
         store.Set([]byte(name), k.cdc.MustMarshalBinary(price))
     }
 ```
-We put this data in the `priceStoreKey` store.  Note that `sdk.Coins` does not have it's own Bytes encoding, and so, to marshal and unmarshal the price for inserting and removing from store, we use Amino (read more about Amino here:  https://github.com/tendermint/go-amino/)
+We put this data in the `priceStoreKey` store.  Note that `sdk.Coins` does not have it's own bytes encoding, which means we need to use [Amino](https://github.com/tendermint/go-amino/) to marshal and unmarshal the price for inserting and removing from the store. 
 
-When getting the price for a name that has no owner (and thus no price), we will return 1steak as the price.
+When getting the price for a name that has no owner (and thus no price), we will return 1 "mycoin" as the price.
 
 
-## Msgs and Handlers
+## Messages and Handlers
 
-Now that we have the keeper setup, it is time to built the msgs and handlers that actually allow users to buy and set names.
+Now that we have the keeper setup, it is time to build the messages and handlers that actually allow users to buy and set names.
 
 ### Set Name
 
-#### Msg
+#### Message
 
-Let's first setup the different messages that a user can use to interact with this module.  The Cosmos SDK define a standard interface that all Msgs must satisfy:
+Let us first setup the different messages that a user can use to interact with this module. The Cosmos SDK define a standard interface that all Msgs must satisfy:
 
 ```go
 // Transactions messages must fulfill the Msg
@@ -205,7 +256,7 @@ type Msg interface {
 }
 ```
 
-We'll start by defining `MsgSetName` in a new file called `msgs.go` in the `nameservice` package, a Msg that allows owner of an address to set the result of resolving a name.
+We'll start by defining `MsgSetName` in a new file called `msgs.go` in the `nameservice` package, a message that allows owner of an address to set the value a name resolves to.
 
 ```go
 type MsgSetName struct {
@@ -223,9 +274,9 @@ func NewMsgSetName(name string, value string, owner sdk.AccAddress) MsgSetName {
 }
 ```
 The `MsgSetName` has three attributes:
-- `name` - The name trying to be set
-- `value` - What the name resolves to
-- `owner` - The owner of that name
+- `name` - The name trying to be set.
+- `value` - What the name resolves to.
+- `owner` - The owner of that name.
 
 Note that we use the field name `NameID` rather than `Name` as `.Name()` is the name of a method on the `Msg` interface.  This will be resolved in a future update of the SDK.  https://github.com/cosmos/cosmos-sdk/issues/2456
 
@@ -720,14 +771,13 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	faucet "github.com/sunnya97/sdk-faucet-module"
 	"github.com/sunnya97/sdk-nameservice-example/x/nameservice"
 )
 ```
 
-Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the four modules we will use in our app: `auth`, `bank`, `faucet` and `nameservice`.
+Here we imported some dependencies from Tendermint, from the Cosmos SDK, and then the four modules we will use in our app: `auth`, `bank`, and `nameservice`.
 
-Next we'll declare the name and struct for our app.  In this example, we'll call it Nameshake, a portmanteau of Handshake and Namecoin.
+Next we'll declare the name and struct for our app.  In this example, we'll call it Nameshake, a portmanteau of Handshake and Namecoin. 
 
 ```go
 const (
@@ -786,7 +836,6 @@ func NewNameshakeApp(logger log.Logger, db dbm.DB) *NameshakeApp {
 
 	app.Router().
 		AddRoute("nameservice", nameservice.NewHandler(app.nsKeeper)).
-		AddRoute("faucet", faucet.NewHandler(app.bankKeeper))
 
 	app.QueryRouter().
 		AddRoute("nameservice", nameservice.NewQuerier(app.nsKeeper))
@@ -843,7 +892,6 @@ func MakeCodec() *codec.Codec {
 	auth.RegisterCodec(cdc)
 	bank.RegisterCodec(cdc)
 	nameservice.RegisterCodec(cdc)
-	faucet.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	return cdc
@@ -861,61 +909,61 @@ nameshaked/main.go
 package main
 
 import (
-	"encoding/json"
-	"io"
-	"os"
+    "encoding/json"
+    "io"
+    "os"
 
-	"github.com/spf13/cobra"
+    "github.com/spf13/cobra"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/cli"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
+    abci "github.com/tendermint/tendermint/abci/types"
+    "github.com/tendermint/tendermint/libs/cli"
+    dbm "github.com/tendermint/tendermint/libs/db"
+    "github.com/tendermint/tendermint/libs/log"
+    tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/cosmos/cosmos-sdk/server"
+    "github.com/cosmos/cosmos-sdk/server"
 
-	app "github.com/sunnya97/sdk-nameservice-example"
+    app "github.com/sunnya97/sdk-nameservice-example"
 )
 
 var DefaultNodeHome = os.ExpandEnv("$HOME/.nameshaked")
 
 var appInit = server.AppInit{
-	AppGenState: server.SimpleAppGenState,
-	AppGenTx:    server.SimpleAppGenTx,
+    AppGenState: server.SimpleAppGenState,
+    AppGenTx:    server.SimpleAppGenTx,
 }
 
 func main() {
-	cdc := app.MakeCodec()
-	ctx := server.NewDefaultContext()
-	cobra.EnableCommandSorting = false
-	rootCmd := &cobra.Command{
-		Use:               "nameshaked",
-		Short:             "Nameshake App Daemon (server)",
-		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
-	}
+    cdc := app.MakeCodec()
+    ctx := server.NewDefaultContext()
+    cobra.EnableCommandSorting = false
+    rootCmd := &cobra.Command{
+        Use:               "nameshaked",
+        Short:             "Nameshake App Daemon (server)",
+        PersistentPreRunE: server.PersistentPreRunEFn(ctx),
+    }
 
-	server.AddCommands(ctx, cdc, rootCmd, appInit,
-		server.ConstructAppCreator(newApp, "nameshake"),
-		server.ConstructAppExporter(exportAppStateAndTMValidators, "nameshake"))
+    server.AddCommands(ctx, cdc, rootCmd, appInit,
+        server.ConstructAppCreator(newApp, "nameshake"),
+        server.ConstructAppExporter(exportAppStateAndTMValidators, "nameshake"))
 
-	// prepare and add flags
-	executor := cli.PrepareBaseCmd(rootCmd, "NS", DefaultNodeHome)
-	err := executor.Execute()
-	if err != nil {
-		// handle with #870
-		panic(err)
-	}
+    // prepare and add flags
+    executor := cli.PrepareBaseCmd(rootCmd, "NS", DefaultNodeHome)
+    err := executor.Execute()
+    if err != nil {
+        // handle with #870
+        panic(err)
+    }
 }
 
 func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer) abci.Application {
-	return app.NewNameshakeApp(logger, db)
+    return app.NewNameshakeApp(logger, db)
 }
 
 func exportAppStateAndTMValidators(
-	logger log.Logger, db dbm.DB, traceStore io.Writer,
+    logger log.Logger, db dbm.DB, traceStore io.Writer,
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
-	return nil, nil, nil
+    return nil, nil, nil
 }
 ```
 
