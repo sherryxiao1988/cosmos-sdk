@@ -141,7 +141,7 @@ A couple of notes about the above code:
 
 ### Getters and Setters
 
-First let's add a function to set the string a given name resolves to.
+Now it is time to add methods to interract with the store via the keeper. First, add a function to set the string a given name resolves to.
 
 ```go
 // SetName - sets the value string that a name resolves to
@@ -151,13 +151,13 @@ func (k Keeper) SetName(ctx sdk.Context, name string, value string) {
 }
 ```
 
-In this method on the Keeper, we first get the store object for the name resolutions using the `namesStoreKey` from the Keeper.
+This method first gets the store object for the name resolutions using the `namesStoreKey` from the Keeper.
 
 >NOTE: This function uses the [`sdk.Context`](https://godoc.org/github.com/cosmos/cosmos-sdk/types#Context) object. This object holds functions to access a number of import pieces of state like blockHeight and chainID. See the godoc for more information on the methods it exposes.
 
-Next, we insert the `<name, value>` pair into the store using its `.Set([]byte, []byte)` method. As the store only takes `[]byte` type and we want to store a `string`, we first need to cast the `string` to `[]byte` in order to use them as parameters for the `Set` method.
+Next, it inserts the `<name, value>` pair into the store using the store's `.Set([]byte, []byte)` method. As the store only takes `[]byte` type and we want to store a `string`, we first need to cast the `string` to `[]byte` in order to use them as parameters for the `Set` method.
 
-Now, let's add a method to actually resolve the names.
+Now, add a method to actually resolve the names.
 
 ```go
 // ResolveName - returns the string that the name resolves to
@@ -168,9 +168,9 @@ func (k Keeper) ResolveName(ctx sdk.Context, name string) string {
 }
 ```
 
-Here, like in the SetName method, we first get the store using the `StoreKey`.  Next, we use the `.Get([]byte) []byte` method. As the parameter to the function, we pass the key, which is the `name` string casted to `[]byte`, and get back the result in the form of `[]byte`.  We cast this to a `string` and return the result.
+Here, like `SetName` method, the `ResolveName` method first retrieves the store object using the `StoreKey`.  Next, it calls the `.Get([]byte) []byte` method. The key, which is the `name` string casted to `[]byte`, is passed as the parameter into the function.  The result is then casted to a `string` before being returned. .
 
-Now, let us add similar functions for getting and setting `Owners`.
+Now,add similar functions for getting and setting `Owners`.
 
 ```go
     // GetOwner - get the current owner of a name
@@ -193,9 +193,13 @@ Now, let us add similar functions for getting and setting `Owners`.
         return bz != nil
     }
 ```
-Note that now, instead of accessing the data from the `namesStoreKey` store, we now get it from the `ownersStoreKey` store.  Additionaly, because `sdk.AccAddress` is a type alias for `[]byte`, we can natively cast to it. We also added an extra function `HasOwner` that tells us whether a name already has an owner or not.
 
-Finally, we will add a getter and setter for the price of a name.
+A couple notes on the code:
+- The data is retrieved from the `ownersStore` store instead of the `namesStore` store
+- Because `sdk.AccAddress` is a type alias for `[]byte`, you can natively cast to it.
+- The function `HasOwner`  tells whether a name already has an owner or not
+
+Finally, add a getter and setter for the price of a name.
 
 ```go
     // GetPrice - gets the current price of a name.  If price doesn't exist yet, set to 1steak.
@@ -216,20 +220,20 @@ Finally, we will add a getter and setter for the price of a name.
         store.Set([]byte(name), k.cdc.MustMarshalBinary(price))
     }
 ```
-We put this data in the `priceStoreKey` store.  Note that `sdk.Coins` does not have it's own bytes encoding, which means we need to use [Amino](https://github.com/tendermint/go-amino/) to marshal and unmarshal the price for inserting and removing from the store. 
 
-When getting the price for a name that has no owner (and thus no price), we will return 1 "mycoin" as the price.
+The data is stored in the `priceStore`.  Note that `sdk.Coins` does not have it's own bytes encoding, which means the price needs to be marsalled and unmarshalled using [Amino](https://github.com/tendermint/go-amino/) to be inserted or removed from the store. 
 
+When getting the price for a name that has no owner (and thus no price), the method will return 1 "mycoin" as the price.
 
 ## Messages and Handlers
 
-Now that we have the keeper setup, it is time to build the messages and handlers that actually allow users to buy and set names.
+Now that you have the `Keeper` setup, it is time to build the `Msg` and `handlers` that actually allow users to buy and set names.
 
 ### Set Name
 
 #### Message
 
-Let us first setup the different messages that a user can use to interact with this module. The Cosmos SDK define a standard interface that all Msgs must satisfy:
+Let us first setup the different messages that a user can use to interact with this module. The Cosmos SDK define a standard interface that all `Msgs` must satisfy:
 
 ```go
 // Transactions messages must fulfill the Msg
@@ -256,7 +260,7 @@ type Msg interface {
 }
 ```
 
-We'll start by defining `MsgSetName` in a new file called `msgs.go` in the `nameservice` package, a message that allows owner of an address to set the value a name resolves to.
+Start by defining `MsgSetName` in a new file `./x/nameservice/msgs.go`, a message that allows owner of an address to set the value a name resolves to.
 
 ```go
 type MsgSetName struct {
@@ -278,14 +282,19 @@ The `MsgSetName` has three attributes:
 - `value` - What the name resolves to.
 - `owner` - The owner of that name.
 
-Note that we use the field name `NameID` rather than `Name` as `.Name()` is the name of a method on the `Msg` interface.  This will be resolved in a future update of the SDK.  https://github.com/cosmos/cosmos-sdk/issues/2456
+Note that the field name `NameID` is used rather than `Name` as `.Name()` is the name of a method on the `Msg` interface.  This will be resolved in a [future update of the SDK](https://github.com/cosmos/cosmos-sdk/issues/2456).
+
+Next, let us define the `Type()` and `Name()` methods of the `Msg` interface:
 
 ```go
 // Implements Msg.
 func (msg MsgSetName) Type() string { return "nameservice" }
 func (msg MsgSetName) Name() string { return "set_name"}
 ```
-These is used by the SDK to route msgs to the proper module for handling and for adding human readable names to tags.
+
+These methods are used by the SDK to route `msgs` to the proper module for handling and for adding human readable names to tags.
+
+Now, let us define the `ValidateBasic()` method:
 
 ```go
 // Implements Msg.
@@ -299,7 +308,9 @@ func (msg MsgSetName) ValidateBasic() sdk.Error {
 	return nil
 }
 ```
-This is used to provide some basic *stateless* checks on the validity of the msg.  In this case, we check that none of the attributes are empty.
+This method is used to provide some basic *stateless* checks on the validity of the msg.  In this case, we check that none of the attributes are empty.
+
+Finally, let us define the `GetSignBytes()` and `GetSigners()` methods:
 
 ```go
 // Implements Msg.
@@ -310,20 +321,20 @@ func (msg MsgSetName) GetSignBytes() []byte {
 	}
 	return sdk.MustSortJSON(b)
 }
-```
-This defines how the Msg gets encoded for signing.  This should usually be in JSON and should not be modified in most cases.
 
-```go
 // Implements Msg.
 func (msg MsgSetName) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 ```
-This allows the Msg to define who's signature is required on a Tx in order for it to be valid.  In this case, for example, the `MsgSetName` requires that the `Owner` sign the transaction trying to reset what the name points to.
+
+The first defines how the `Msg` gets encoded for signing. This should usually be in JSON and should not be modified in most cases.
+
+The second allows the `Msg` to define whose signature is required on a transaction in order for it to be valid.  In this case, for example, the `MsgSetName` requires that the `Owner` sign the transaction trying to reset what the name points to.
 
 #### Handler
 
-Now that we have the `MsgSetName` defined, we now have to define the handler that actually executes the Msg.
+Now that the `MsgSetName` is defined, you have to define the handler that actually executes the `Msg`.
 
 In a new file called `handler.go` in the `nameservice` package, we start off with:
 
