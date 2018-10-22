@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	app "github.com/cosmos/cosmos-sdk/tree/gamarin/integrate-nameservice/docs/sdk/sdk-by-examples/nameservice"
+	app "github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameservice"
 
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	faucetcmd "github.com/sunnya97/sdk-faucet-module/client/cli"

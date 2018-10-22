@@ -23,6 +23,10 @@
   name = "github.com/cosmos/cosmos-sdk"
   branch = "develop"
 
+[[constraint]]
+  name = "github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameservice"
+  branch = "gamarin/integrate-nameservice"
+
 [[override]]
   name = "github.com/golang/protobuf"
   version = "=1.1.0"
