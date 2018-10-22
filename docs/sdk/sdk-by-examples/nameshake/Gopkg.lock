@@ -48,8 +48,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "develop"
-  digest = "1:2a827a58c7b8d5d2cf19d7ded6d5812ac88e42e1f923c2c1129c860015975368"
+  branch = "gamarin/integrate-nameservice"
+  digest = "1:cf8466ca93fdf6623d101463a8e0f53ecc914c4d785c47f4f4ba315332e8f525"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -62,9 +62,8 @@
     "codec",
     "crypto",
     "crypto/keys",
-    "crypto/keys/bcrypt",
-    "crypto/keys/bip39",
     "crypto/keys/hd",
+    "crypto/keys/mintkey",
     "server",
     "server/config",
     "store",
@@ -76,7 +75,14 @@
     "x/bank",
   ]
   pruneopts = "UT"
-  revision = "7c9048b591de2aba9bf4c04aa1517f5c81d1a692"
+  revision = "d55cb52b6cf1a6485507add5bf4d097688d71702"
+
+[[projects]]
+  digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
+  name = "github.com/cosmos/go-bip39"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "52158e4697b87de16ed390e1bdaf813e581008fa"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -277,14 +283,6 @@
   version = "v1.1.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:0fb7770a4a81c0029605308e62b0bd7718e18c473cd148cbca8c5f8ae35c68cf"
-  name = "github.com/mossid/sdk-nameservice-example"
-  packages = ["x/faucet"]
-  pruneopts = "UT"
-  revision = "88f91e0536192de317548b9078e13e852248e12b"
-
-[[projects]]
   digest = "1:95741de3af260a92cc5c7f3f3061e85273f5a81b5db20d4bd68da74bd521675e"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
@@ -422,29 +420,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b8bfa672039163c844a23eb688b35366e94b25282cba54e8af103a9f4d910d0a"
-  name = "github.com/sunnya97/sdk-faucet-module"
-  packages = [
-    ".",
-    "client/cli",
-  ]
-  pruneopts = "UT"
-  revision = "938905e9931485a00988ba90a5ce65817fbeb8b7"
-
-[[projects]]
-  branch = "master"
-  digest = "1:d6facb45cb53d730876b5e4cc8e5862e18d7576b39fa8246de8c610500233f33"
-  name = "github.com/sunnya97/sdk-nameservice-example"
-  packages = [
-    ".",
-    "x/nameservice",
-    "x/nameservice/client/cli",
-  ]
-  pruneopts = "UT"
-  revision = "ff16af6bd54bba8da444caac185c9702e764f8fd"
-
-[[projects]]
-  branch = "master"
   digest = "1:f2ffd421680b0a3f7887501b3c6974bcf19217ecd301d0e2c9b681940ec363d5"
   name = "github.com/syndtr/goleveldb"
   packages = [
@@ -578,10 +553,10 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:27507554c6d4f060d8d700c31c624a43d3a92baa634e178ddc044bdf7d13b44a"
+  digest = "1:aaff04fa01d9b824fde6799759cc597b3ac3671b9ad31924c28b6557d0ee5284"
   name = "golang.org/x/crypto"
   packages = [
+    "bcrypt",
     "blowfish",
     "chacha20poly1305",
     "curve25519",
@@ -598,7 +573,8 @@
     "salsa20/salsa",
   ]
   pruneopts = "UT"
-  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+  source = "https://github.com/tendermint/crypto"
 
 [[projects]]
   digest = "1:d36f55a999540d29b6ea3c2ea29d71c76b1d9853fdcd3e5c5cb4836f2ba118f1"
@@ -717,11 +693,6 @@
     "github.com/cosmos/cosmos-sdk/x/auth/client/cli",
     "github.com/cosmos/cosmos-sdk/x/bank",
     "github.com/spf13/cobra",
-    "github.com/sunnya97/sdk-faucet-module",
-    "github.com/sunnya97/sdk-faucet-module/client/cli",
-    "github.com/sunnya97/sdk-nameservice-example",
-    "github.com/sunnya97/sdk-nameservice-example/x/nameservice",
-    "github.com/sunnya97/sdk-nameservice-example/x/nameservice/client/cli",
     "github.com/tendermint/tendermint/abci/types",
     "github.com/tendermint/tendermint/libs/cli",
     "github.com/tendermint/tendermint/libs/common",

@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
-	"github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameservice"
+	"github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameshake/x/nameservice"
 )
 
 const (
@@ -45,11 +45,7 @@ func GetCmdBuyName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := nameservice.MsgBuyName{
-				NameID: name,
-				Bid:    coins,
-				Buyer:  account,
-			}
+			msg := nameservice.NewMsgBuyName(name, coins, account)
 
 			tx := auth.StdTx{
 				Msgs: []sdk.Msg{msg},
@@ -88,11 +84,7 @@ func GetCmdSetName(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := nameservice.MsgSetName{
-				NameID: name,
-				Value:  value,
-				Owner:  account,
-			}
+			msg := nameservice.NewMsgSetName(name, value,account)
 
 			tx := auth.StdTx{
 				Msgs: []sdk.Msg{msg},

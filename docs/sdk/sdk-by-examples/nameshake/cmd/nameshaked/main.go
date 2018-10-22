@@ -15,7 +15,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 
-	app "github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameservice"
+	app "github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameshake"
 )
 
 var DefaultNodeHome = os.ExpandEnv("$HOME/.nameshaked")
@@ -36,8 +36,8 @@ func main() {
 	}
 
 	server.AddCommands(ctx, cdc, rootCmd, appInit,
-		server.ConstructAppCreator(newApp, "nameshake"),
-		server.ConstructAppExporter(exportAppStateAndTMValidators, "nameshake"))
+		newApp,
+		exportAppStateAndTMValidators)
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "NS", DefaultNodeHome)

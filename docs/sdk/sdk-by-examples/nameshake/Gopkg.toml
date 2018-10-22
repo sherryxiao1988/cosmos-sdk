@@ -21,10 +21,6 @@
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
-  branch = "develop"
-
-[[constraint]]
-  name = "github.com/cosmos/cosmos-sdk/docs/sdk/sdk-by-examples/nameservice"
   branch = "gamarin/integrate-nameservice"
 
 [[override]]
