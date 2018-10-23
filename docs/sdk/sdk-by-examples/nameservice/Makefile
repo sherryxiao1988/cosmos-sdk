@@ -18,6 +18,11 @@ get_vendor_deps:
 	@rm -rf .vendor-new
 	@dep ensure -v -vendor-only
 
+update_vendor_deps:
+	@echo "--> Running dep ensure"
+	@rm -rf .vendor-new
+	@dep ensure -v
+
 install:
-	go install ./cmd/nameshaked
-	go install ./cmd/nameshakecli
+	go install ./cmd/nameserviced
+	go install ./cmd/nameservicecli
